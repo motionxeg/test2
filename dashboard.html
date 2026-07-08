@@ -189,7 +189,7 @@
         </div>
     </div>
 
-    <aside id="sidebar" class="hidden md:flex w-20 bg-slate-900 border-e border-slate-800 flex-col justify-between items-center py-6 z-20 h-full">
+    <aside id="sidebar" class="hidden md:flex md:fixed md:top-0 md:left-0 w-20 bg-slate-900 border-e border-slate-800 flex-col justify-between items-center py-6 z-30 md:h-screen">
         <div class="flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/20">
             <i class="fa-solid fa-cube text-xl"></i>
         </div>
@@ -332,7 +332,7 @@
             </div>
         </header>
 
-        <main class="p-8 space-y-6 pb-24 md:pb-6">
+        <main class="p-8 space-y-6 pb-24 md:pb-6 md:ml-20">
             <div id="tab-dashboard" class="tab-content active space-y-6">
                 <!-- Selector Header -->
                 <div class="flex flex-col md:flex-row md:items-center justify-between bg-white dark:bg-slate-900 p-6 rounded-2xl border border-gray-100 dark:border-slate-800 shadow-sm gap-4">
@@ -3206,10 +3206,14 @@
                             });
 
                             // Build contracts table rows
-                            let contractsHtml = '';
                             let contractsCount = 0;
                             let totalContractsValue = 0;
                             let totalOfficeCommissionComp = 0;
+                            let totalOwnerDue = 0;
+                            let totalKmDriven = 0;
+                            let totalOwnerExpenses = 0;
+
+                            let contractsRows = '';
 
                             filteredContracts.forEach(cont => {
                                 contractsCount++;
@@ -3219,6 +3223,12 @@
                                 const ownerShare = gross - commission;
                                 totalContractsValue += gross;
                                 totalOfficeCommissionComp += commission;
+                                totalOwnerDue += ownerShare;
+
+                                // calculate kilometers driven for this contract (best-effort)
+                                let drivenKm = 0;
+                                if (cont.kmEnd && cont.kmStart) drivenKm = (cont.kmEnd - cont.kmStart);
+                                totalKmDriven += drivenKm;
 
                                 // car and owner lookup (best-effort)
                                 const car = allCars.find(cc=>cc.id===cont.carId) || {};
@@ -3233,16 +3243,21 @@
                                     });
                                 }
 
-                                contractsHtml += `<div class="p-3 rounded-lg border mb-2">
-                                    <div class="text-sm font-bold">${cont.serial || cont.id} — ${contractDate}</div>
-                                    <div class="text-xs text-slate-600">${car.brand || ''} ${car.model || ''} (${car.plate || '-'}) • ${owner.name || 'Owner'}</div>
-                                    <div class="mt-2 text-xs grid grid-cols-3 gap-2">
-                                        <div class="font-mono">Gross: ${gross.toFixed(2)} EGP</div>
-                                        <div class="font-mono">Commission: ${commission.toFixed(2)} EGP</div>
-                                        <div class="font-mono">Owner Share: ${ownerShare.toFixed(2)} EGP</div>
-                                    </div>
-                                    ${ ownerExpHtml ? `<div class="mt-2"><div class="text-[11px] font-semibold">Owner Expenses:</div>${ownerExpHtml}</div>` : '' }
-                                </div>`;
+                                const statusText = cont.status || '-';
+
+                                contractsRows += `<tr class="border-b">
+                                    <td class="px-2 py-2">${cont.serial || cont.id}</td>
+                                    <td class="px-2 py-2">${contractDate}</td>
+                                    <td class="px-2 py-2">${car.brand || ''} ${car.model || ''} (${car.plate || '-'})</td>
+                                    <td class="px-2 py-2 text-right font-mono">${ownerShare.toFixed(2)}</td>
+                                    <td class="px-2 py-2 text-center">${drivenKm}</td>
+                                    <td class="px-2 py-2 text-center">${statusText}</td>
+                                </tr>`;
+
+                                // owner-specific expenses during period (for totals)
+                                if (ownerExpensesForPeriod.length) {
+                                    ownerExpensesForPeriod.forEach(oe => { totalOwnerExpenses += parseFloat(oe.amount || 0); });
+                                }
                             });
 
                             // Company expenses in period
@@ -3251,21 +3266,40 @@
                             let totalCompExpenses = 0;
                             compExpenses.forEach(exp => { totalCompExpenses += parseFloat(exp.amount || 0); expensesHtml += `<div class="p-2 border-b text-xs flex justify-between"><div>${exp.title}</div><div class="font-mono">${parseFloat(exp.amount).toFixed(2)} EGP</div><div class="text-slate-400 ml-4">${exp.date}</div></div>`; });
 
-                            // Compose final HTML
+                            // Compose contracts table HTML
+                            let tableHtml = '';
+                            if (contractsRows) {
+                                tableHtml = `<div class="overflow-x-auto mt-2"><table class="w-full table-auto text-xs border-collapse">
+                                    <thead><tr class="bg-gray-100"><th class="px-2 py-2 text-left">رقم العقد</th><th class="px-2 py-2 text-left">تاريخ العقد</th><th class="px-2 py-2 text-left">السيارة</th><th class="px-2 py-2 text-right">مبلغ المالك</th><th class="px-2 py-2 text-center">الكيلومترات</th><th class="px-2 py-2 text-center">الحالة</th></tr></thead>
+                                    <tbody>${contractsRows}</tbody>
+                                </table></div>`;
+                            } else {
+                                tableHtml = '<div class="text-xs text-slate-400">No contracts in period.</div>';
+                            }
+
+                            const netOwnerPayable = totalOwnerDue - totalOwnerExpenses;
+
+                            // Compose final HTML including summary
                             compArea.innerHTML = `
                                 <div class="mb-4">
                                     <h4 class="font-bold text-lg">${t('reports-title') || 'Company Closing'}</h4>
                                     <div class="text-sm text-slate-500">${t('reports-sub') || ''}</div>
                                 </div>
-                                <div class="mb-3 text-sm">
-                                    <div>Contracts in period: <strong>${contractsCount}</strong></div>
-                                    <div>Contracts Total Value: <strong>${totalContractsValue.toFixed(2)} EGP</strong></div>
-                                    <div>Office Commission Total: <strong>${totalOfficeCommissionComp.toFixed(2)} EGP</strong></div>
-                                    <div>Company Expenses Total: <strong>${totalCompExpenses.toFixed(2)} EGP</strong></div>
+                                <div class="mb-3 text-sm grid grid-cols-1 md:grid-cols-3 gap-3">
+                                    <div class="bg-gray-50 p-3 rounded-md text-sm"><div class="text-xs text-slate-400">عدد العقود</div><div class="font-bold text-lg">${contractsCount}</div></div>
+                                    <div class="bg-gray-50 p-3 rounded-md text-sm"><div class="text-xs text-slate-400">إجمالي قيمة العقود (جروس)</div><div class="font-bold text-lg">${totalContractsValue.toFixed(2)} EGP</div></div>
+                                    <div class="bg-gray-50 p-3 rounded-md text-sm"><div class="text-xs text-slate-400">إجمالي مستحقات المالك</div><div class="font-bold text-lg">${totalOwnerDue.toFixed(2)} EGP</div></div>
+                                    <div class="bg-gray-50 p-3 rounded-md text-sm"><div class="text-xs text-slate-400">إجمالي الكيلومترات</div><div class="font-bold text-lg">${totalKmDriven}</div></div>
+                                    <div class="bg-gray-50 p-3 rounded-md text-sm"><div class="text-xs text-slate-400">إجمالي مصروفات الشركة</div><div class="font-bold text-lg">${totalCompExpenses.toFixed(2)} EGP</div></div>
+                                    <div class="bg-gray-50 p-3 rounded-md text-sm"><div class="text-xs text-slate-400">إجمالي مصروفات المالك</div><div class="font-bold text-lg">${totalOwnerExpenses.toFixed(2)} EGP</div></div>
+                                    <div class="bg-white col-span-1 md:col-span-3 p-3 rounded-md border mt-2">
+                                        <div class="text-sm text-slate-600">صافي المبلغ المستحق للمالك</div>
+                                        <div class="font-bold text-2xl">${netOwnerPayable.toFixed(2)} EGP</div>
+                                    </div>
                                 </div>
                                 <div class="mb-4">
-                                    <h5 class="font-bold text-sm mb-2">Contracts Details</h5>
-                                    ${contractsHtml || '<div class="text-xs text-slate-400">No contracts in period.</div>'}
+                                    <h5 class="font-bold text-sm mb-2">تفاصيل العقود</h5>
+                                    ${tableHtml}
                                 </div>
                                 <div>
                                     <h5 class="font-bold text-sm mb-2">Company Expenses</h5>
