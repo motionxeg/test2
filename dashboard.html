@@ -3209,6 +3209,7 @@
                             let contractsCount = 0;
                             let totalContractsValue = 0;
                             let totalOfficeCommissionComp = 0;
+                            let totalCompanyProfit = 0;
                             let totalOwnerDue = 0;
                             let totalKmDriven = 0;
                             let totalOwnerExpenses = 0;
@@ -3223,6 +3224,7 @@
                                 const ownerShare = gross - commission;
                                 totalContractsValue += gross;
                                 totalOfficeCommissionComp += commission;
+                                totalCompanyProfit += commission;
                                 totalOwnerDue += ownerShare;
 
                                 // calculate kilometers driven for this contract (best-effort)
@@ -3249,6 +3251,8 @@
                                     <td class="px-2 py-2">${cont.serial || cont.id}</td>
                                     <td class="px-2 py-2">${contractDate}</td>
                                     <td class="px-2 py-2">${car.brand || ''} ${car.model || ''} (${car.plate || '-'})</td>
+                                    <td class="px-2 py-2">${owner.name || 'مالك غير معروف'}</td>
+                                    <td class="px-2 py-2 text-right font-mono">${commission.toFixed(2)}</td>
                                     <td class="px-2 py-2 text-right font-mono">${ownerShare.toFixed(2)}</td>
                                     <td class="px-2 py-2 text-center">${drivenKm}</td>
                                     <td class="px-2 py-2 text-center">${statusText}</td>
@@ -3265,12 +3269,13 @@
                             let expensesHtml = '';
                             let totalCompExpenses = 0;
                             compExpenses.forEach(exp => { totalCompExpenses += parseFloat(exp.amount || 0); expensesHtml += `<div class="p-2 border-b text-xs flex justify-between"><div>${exp.title}</div><div class="font-mono">${parseFloat(exp.amount).toFixed(2)} EGP</div><div class="text-slate-400 ml-4">${exp.date}</div></div>`; });
+                            const netCompanyProfit = totalCompanyProfit - totalCompExpenses;
 
                             // Compose contracts table HTML
                             let tableHtml = '';
                             if (contractsRows) {
                                 tableHtml = `<div class="overflow-x-auto mt-2"><table class="w-full table-auto text-xs border-collapse">
-                                    <thead><tr class="bg-gray-100"><th class="px-2 py-2 text-left">رقم العقد</th><th class="px-2 py-2 text-left">تاريخ العقد</th><th class="px-2 py-2 text-left">السيارة</th><th class="px-2 py-2 text-right">مبلغ المالك</th><th class="px-2 py-2 text-center">الكيلومترات</th><th class="px-2 py-2 text-center">الحالة</th></tr></thead>
+                                    <thead><tr class="bg-gray-100"><th class="px-2 py-2 text-left">رقم العقد</th><th class="px-2 py-2 text-left">تاريخ العقد</th><th class="px-2 py-2 text-left">السيارة</th><th class="px-2 py-2 text-right">مكسب الشركة من العقد</th><th class="px-2 py-2 text-right">مستحق المالك</th><th class="px-2 py-2 text-center">الكيلومترات</th><th class="px-2 py-2 text-center">الحالة</th></tr></thead>
                                     <tbody>${contractsRows}</tbody>
                                 </table></div>`;
                             } else {
@@ -3278,6 +3283,7 @@
                             }
 
                             const netOwnerPayable = totalOwnerDue - totalOwnerExpenses;
+                            const netCompanyProfit = totalCompanyProfit - totalCompExpenses;
 
                             // Compose final HTML including summary
                             compArea.innerHTML = `
@@ -3288,6 +3294,7 @@
                                 <div class="mb-3 text-sm grid grid-cols-1 md:grid-cols-3 gap-3">
                                     <div class="bg-gray-50 p-3 rounded-md text-sm"><div class="text-xs text-slate-400">عدد العقود</div><div class="font-bold text-lg">${contractsCount}</div></div>
                                     <div class="bg-gray-50 p-3 rounded-md text-sm"><div class="text-xs text-slate-400">إجمالي قيمة العقود (جروس)</div><div class="font-bold text-lg">${totalContractsValue.toFixed(2)} EGP</div></div>
+                                    <div class="bg-gray-50 p-3 rounded-md text-sm"><div class="text-xs text-slate-400">إجمالي مكاسب الشركة</div><div class="font-bold text-lg">${totalCompanyProfit.toFixed(2)} EGP</div></div>
                                     <div class="bg-gray-50 p-3 rounded-md text-sm"><div class="text-xs text-slate-400">إجمالي مستحقات المالك</div><div class="font-bold text-lg">${totalOwnerDue.toFixed(2)} EGP</div></div>
                                     <div class="bg-gray-50 p-3 rounded-md text-sm"><div class="text-xs text-slate-400">إجمالي الكيلومترات</div><div class="font-bold text-lg">${totalKmDriven}</div></div>
                                     <div class="bg-gray-50 p-3 rounded-md text-sm"><div class="text-xs text-slate-400">إجمالي مصروفات الشركة</div><div class="font-bold text-lg">${totalCompExpenses.toFixed(2)} EGP</div></div>
@@ -3295,6 +3302,10 @@
                                     <div class="bg-white col-span-1 md:col-span-3 p-3 rounded-md border mt-2">
                                         <div class="text-sm text-slate-600">صافي المبلغ المستحق للمالك</div>
                                         <div class="font-bold text-2xl">${netOwnerPayable.toFixed(2)} EGP</div>
+                                    </div>
+                                    <div class="bg-white col-span-1 md:col-span-3 p-3 rounded-md border mt-2">
+                                        <div class="text-sm text-slate-600">صافي مكسب الشركة بعد المصاريف</div>
+                                        <div class="font-bold text-2xl">${netCompanyProfit.toFixed(2)} EGP</div>
                                     </div>
                                 </div>
                                 <div class="mb-4">
