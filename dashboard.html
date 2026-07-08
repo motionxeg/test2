@@ -87,15 +87,39 @@
     }
     /* Mobile improvements */
     @media (max-width: 768px) {
+        /* Allow normal document flow on small screens so body/html handle scrolling */
+        body { display: block; }
         .overflow-x-auto { -webkit-overflow-scrolling: touch; }
-        table th, table td { white-space: normal !important; word-break: break-word !important; }
         .tab-content { padding-bottom: 1rem; }
         #mobile-bottom-nav { padding-bottom: env(safe-area-inset-bottom); }
+        /* mobile typography and text-flow improvements */
+        body { font-size: 14px; line-height: 1.45; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+        /* prevent Arabic words from being broken into letters on small screens */
+        [dir="rtl"] table th, [dir="rtl"] table td, [dir="rtl"] .overflow-x-auto, [dir="rtl"] .tab-content { word-break: keep-all; hyphens: none; }
+        input, select, button, textarea { font-family: inherit; font-size: 13px; }
     }
 
     /* Mobile drawer (hidden by default, slides in) */
     #mobile-drawer { transition: transform 250ms ease-in-out; }
     #mobile-drawer.open { transform: translateX(0) !important; }
+    @media (max-width: 768px) {
+        /* Prevent table headers/values from collapsing into vertical single-letters by forcing horizontal scroll */
+        .overflow-x-auto table, .overflow-x-auto thead, .overflow-x-auto tbody, .overflow-x-auto tr { white-space: nowrap; }
+        .overflow-x-auto th, .overflow-x-auto td { white-space: nowrap; overflow: visible; }
+        /* increase bottom padding so mobile bottom nav doesn't cover content */
+        main { padding-bottom: 110px; }
+        /* hide large watermark on small screens */
+        .watermark { display: none !important; }
+        /* make mobile drawer full height and comfortable width */
+        #mobile-drawer { width: 86%; transform: translateX(-100%); }
+        #mobile-drawer.open { transform: translateX(0); }
+        /* ensure bottom nav fits */
+        #mobile-bottom-nav > div { max-width: calc(100vw - 24px); }
+        /* increase table cell padding on mobile for readability */
+        .overflow-x-auto td, .overflow-x-auto th { padding: 12px !important; }
+        /* ensure horizontal writing and normal text flow */
+        .overflow-x-auto th, .overflow-x-auto td { writing-mode: horizontal-tb !important; transform: none !important; display: table-cell !important; }
+    }
     </style>
 </head>
 <body class="antialiased min-h-screen flex">
@@ -243,8 +267,10 @@
             <button data-tab="settings" class="tab-btn flex items-center text-white p-3 rounded-lg hover:bg-slate-800"><i class="fa-solid fa-gear ml-3"></i><span>الإعدادات</span></button>
         </nav>
     </div>
+    <!-- Backdrop for mobile drawer -->
+    <div id="mobile-drawer-backdrop" class="hidden md:hidden fixed inset-0 bg-black/40 z-40"></div>
 
-    <div class="flex-1 flex flex-col overflow-y-auto">
+    <div class="flex-1 flex flex-col">
         
         <header class="px-8 py-6 flex items-center justify-between border-b border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900">
             <div class="flex items-center space-x-6 space-x-reverse">
@@ -276,7 +302,7 @@
                             <span class="font-bold text-sm" data-i18n="title-notifications">التنبيهات</span>
                             <span class="text-xs text-blue-500 cursor-pointer hover:underline" id="refresh-alerts-btn" data-i18n="btn-refresh-alerts">تحديث</span>
                         </div>
-                        <div class="max-h-64 overflow-y-auto divide-y divide-gray-100 dark:divide-slate-800/60" id="alert-list-container">
+                        <div class="divide-y divide-gray-100 dark:divide-slate-800/60" id="alert-list-container">
                             <div class="p-4 text-center text-xs text-slate-400">لا يوجد تنبيهات حالياً.</div>
                         </div>
                     </div>
@@ -398,7 +424,7 @@
                             <h3 class="font-bold text-slate-800 dark:text-white text-base"><i class="fa-solid fa-triangle-exclamation text-rose-500 ml-2"></i><span data-i18n="dashboard-alerts-title">لوحة التنبيهات الفورية</span></h3>
                             <p class="text-xs text-slate-400 mt-0.5" data-i18n="dashboard-alerts-desc">تحديث تلقائي لأهم التحذيرات التشغيلية والمالية</p>
                         </div>
-                        <div class="space-y-3 max-h-80 overflow-y-auto pr-1" id="dashboard-alerts-list">
+                        <div class="space-y-3 pr-1" id="dashboard-alerts-list">
                             <div class="text-center text-xs py-8 text-slate-400">لا يوجد تنبيهات عاجلة.</div>
                         </div>
                     </div>
@@ -648,7 +674,7 @@
                 </div>
 
                 <div class="grid grid-cols-1 xl:grid-cols-3 gap-6 items-start">
-                    <div class="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-gray-100 dark:border-slate-800 shadow-sm space-y-4 max-h-[85vh] overflow-y-auto">
+                    <div class="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-gray-100 dark:border-slate-800 shadow-sm space-y-4">
                         <h3 id="contract-form-title" class="font-bold text-slate-700 dark:text-slate-300 text-sm border-b border-gray-100 dark:border-slate-800 pb-2" data-i18n="contract-form-title-add">إنشاء عقد جديد</h3>
                         
                         <form id="contract-form" class="space-y-4">
@@ -922,44 +948,44 @@
             <div id="tab-reports" class="tab-content space-y-6">
                 <div class="flex justify-between items-center border-b border-gray-200 dark:border-slate-800 pb-4">
                     <div>
-                        <h2 class="text-xl font-bold text-slate-800 dark:text-white" id="reports-main-title">التقارير الشاملة وتقفيل الحسابات</h2>
-                        <p class="text-sm text-slate-500 mt-0.5" id="reports-main-sub">توليد وتصدير تقارير تصفية الملاك والعملاء، أو تقرير تقفيل الشركة المالي</p>
+                        <h2 class="text-xl font-bold text-slate-800 dark:text-white" id="reports-main-title" data-i18n="reports-title">التقارير الشاملة وتقفيل الحسابات</h2>
+                        <p class="text-sm text-slate-500 mt-0.5" id="reports-main-sub" data-i18n="reports-sub">توليد وتصدير تقارير تصفية الملاك والعملاء، أو تقرير تقفيل الشركة المالي</p>
                     </div>
                 </div>
 
                 <!-- Report Type Selector -->
                 <div class="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-gray-100 dark:border-slate-800 shadow-sm max-w-md">
-                    <label class="block text-xs font-semibold text-slate-500 mb-1">اختر نوع التقرير المطلوب</label>
+                    <label class="block text-xs font-semibold text-slate-500 mb-1" data-i18n="lbl-report-filter">اختر نوع التقرير المطلوب</label>
                     <select id="report-type-select" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 text-sm focus:outline-none focus:border-blue-500 font-semibold">
-                        <option value="settlement">تصفية وتقفيل حساب الملاك والعملاء (Settlement)</option>
-                        <option value="company-closing">تقفيل الشركة المالي الشامل (Company Closing)</option>
+                        <option value="settlement" data-i18n="opt-report-settlement">تصفية وتقفيل حساب الملاك والعملاء (Settlement)</option>
+                        <option value="company-closing" data-i18n="opt-report-company-closing">تقفيل الشركة المالي الشامل (Company Closing)</option>
                     </select>
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6" id="report-filter-box">
                     <!-- Right: Search options -->
                     <div class="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-gray-100 dark:border-slate-800 shadow-sm space-y-4">
-                        <h3 class="font-bold text-slate-700 dark:text-slate-300 text-sm border-b border-gray-100 dark:border-slate-800 pb-2">خيارات التصفية والفترة</h3>
+                                <h3 class="font-bold text-slate-700 dark:text-slate-300 text-sm border-b border-gray-100 dark:border-slate-800 pb-2" data-i18n="lbl-report-filter">خيارات التصفية والفترة</h3>
                         
                         <div class="space-y-3">
                             <!-- Settlement Report Fields -->
                             <div id="report-settlement-fields" class="space-y-3">
                                 <div>
-                                    <label class="block text-xs font-semibold text-slate-500 mb-1">نوع الحساب</label>
+                                    <label class="block text-xs font-semibold text-slate-500 mb-1" data-i18n="lbl-report-target-type">نوع الحساب</label>
                                     <select id="report-target-type" class="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 text-sm focus:outline-none">
-                                        <option value="owner">صاحب العربية (مالك)</option>
-                                        <option value="customer">العميل (المستأجر)</option>
+                                        <option value="owner" data-i18n="opt-report-owner">صاحب العربية (مالك)</option>
+                                        <option value="customer" data-i18n="opt-report-customer">العميل (المستأجر)</option>
                                     </select>
                                 </div>
                                 <div>
-                                    <label class="block text-xs font-semibold text-slate-500 mb-1">اختر الشخص المسؤول</label>
+                                    <label class="block text-xs font-semibold text-slate-500 mb-1" data-i18n="lbl-report-select-entity">اختر الشخص المسؤول</label>
                                     <select id="report-entity-select" class="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 text-sm focus:outline-none">
                                     </select>
                                 </div>
                                 <div id="div-report-car-filter">
-                                    <label class="block text-xs font-semibold text-slate-500 mb-1">تحديد سيارة معينة (اختياري)</label>
+                                    <label class="block text-xs font-semibold text-slate-500 mb-1" data-i18n="lbl-report-car-filter">تحديد سيارة معينة (اختياري)</label>
                                     <select id="report-car-select" class="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 text-sm focus:outline-none">
-                                        <option value="">-- كل سيارات المالك --</option>
+                                        <option value="" data-i18n="opt-report-all-cars">-- كل سيارات المالك --</option>
                                     </select>
                                 </div>
                             </div>
@@ -967,24 +993,24 @@
                             <!-- Shared Date Fields -->
                             <div class="grid grid-cols-2 gap-2 border-t border-gray-100 dark:border-slate-800 pt-2">
                                 <div>
-                                    <label class="block text-[11px] font-semibold text-slate-400 mb-1">من تاريخ</label>
+                                    <label class="block text-[11px] font-semibold text-slate-400 mb-1" data-i18n="lbl-report-start-date">من تاريخ</label>
                                     <input type="text" id="report-start-date" class="w-full px-3 py-1.5 rounded-lg border border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 text-xs focus:outline-none">
                                 </div>
                                 <div>
-                                    <label class="block text-[11px] font-semibold text-slate-400 mb-1">إلى تاريخ</label>
+                                    <label class="block text-[11px] font-semibold text-slate-400 mb-1" data-i18n="lbl-report-end-date">إلى تاريخ</label>
                                     <input type="text" id="report-end-date" class="w-full px-3 py-1.5 rounded-lg border border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 text-xs focus:outline-none">
                                 </div>
                             </div>
 
-                            <button id="btn-generate-report" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-xl text-sm transition-colors shadow-lg shadow-blue-500/10 mt-2">عرض وتوليد التقرير</button>
+                            <button id="btn-generate-report" data-i18n="btn-generate-report-txt" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-xl text-sm transition-colors shadow-lg shadow-blue-500/10 mt-2">عرض وتوليد التقرير</button>
                         </div>
                     </div>
 
                     <!-- Left: Settlement Preview Area -->
                     <div id="report-settlement-preview-box" class="md:col-span-2 bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-slate-800 shadow-sm p-6 flex flex-col justify-between">
                         <div class="border-b border-gray-100 dark:border-slate-800 pb-3">
-                            <h4 id="report-results-title" class="font-bold text-slate-800 dark:text-white text-base">الملخص المالي الفوري للمعاينة</h4>
-                            <p class="text-xs text-slate-400 mt-0.5">انظر أدناه للمعاينة، وبإمكانك الضغط على أزرار التصدير أو الطباعة لتوليد التقرير.</p>
+                            <h4 id="report-results-title" class="font-bold text-slate-800 dark:text-white text-base" data-i18n="reports-preview-title">الملخص المالي الفوري للمعاينة</h4>
+                                <p class="text-xs text-slate-400 mt-0.5" data-i18n="reports-preview-desc">انظر أدناه للمعاينة، وبإمكانك الضغط على أزرار التصدير أو الطباعة لتوليد التقرير.</p>
                         </div>
 
                         <div class="grid grid-cols-3 gap-4 my-6">
@@ -1004,10 +1030,10 @@
 
                         <div class="flex justify-between items-center pt-4 border-t border-gray-100 dark:border-slate-800">
                             <div class="flex space-x-2 space-x-reverse">
-                                <button type="button" id="btn-settle-excel" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all"><i class="fa-solid fa-file-excel ml-1"></i>Excel</button>
-                                <button type="button" id="btn-settle-pdf" class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition-all"><i class="fa-solid fa-file-pdf ml-1"></i>PDF</button>
+                                <button type="button" id="btn-settle-excel" data-i18n="btn-settle-excel" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all"><i class="fa-solid fa-file-excel ml-1"></i>Excel</button>
+                                <button type="button" id="btn-settle-pdf" data-i18n="btn-settle-pdf" class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition-all"><i class="fa-solid fa-file-pdf ml-1"></i>PDF</button>
                             </div>
-                            <button type="button" onclick="printReportInvoice()" class="px-5 py-2 bg-slate-900 hover:bg-slate-800 text-slate-100 rounded-xl text-xs font-bold border border-slate-700 shadow-sm transition-all"><i class="fa-solid fa-print ml-1"></i>طباعة الإيصال الرسمي</button>
+                            <button type="button" id="btn-print-invoice" data-i18n="btn-print-report" onclick="printReportInvoice()" class="px-5 py-2 bg-slate-900 hover:bg-slate-800 text-slate-100 rounded-xl text-xs font-bold border border-slate-700 shadow-sm transition-all"><i class="fa-solid fa-print ml-1"></i>طباعة الإيصال الرسمي</button>
                         </div>
                     </div>
 
@@ -1390,12 +1416,12 @@
 
             <!-- Global Search Modal -->
             <div id="global-search-modal" class="fixed inset-0 bg-slate-950/75 backdrop-blur-sm flex justify-center items-start pt-20 z-50 hidden">
-                <div class="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl w-full max-w-3xl max-h-[70vh] overflow-hidden flex flex-col shadow-2xl mx-4">
+                <div class="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl w-full max-w-3xl flex flex-col shadow-2xl mx-4">
                     <div class="p-4 border-b border-gray-100 dark:border-slate-800 flex justify-between items-center">
                         <span class="font-bold text-sm text-slate-800 dark:text-white" data-i18n="search-modal-title">نتائج البحث الشامل</span>
                         <button id="close-search-modal" class="text-slate-400 hover:text-slate-600 text-lg">&times;</button>
                     </div>
-                    <div class="p-4 overflow-y-auto space-y-4 flex-1 text-sm text-right" id="search-modal-results-container">
+                    <div class="p-4 space-y-4 flex-1 text-sm text-right" id="search-modal-results-container">
                         <!-- Results divided by categories -->
                     </div>
                 </div>
@@ -1919,6 +1945,52 @@
                     if (translations[lang] && translations[lang][key]) element.innerText = translations[lang][key];
                 });
 
+                // Ensure report-type select options follow language even if translation keys are missing
+                try {
+                    const reportOptionLabels = {
+                        ar: {
+                            settlement: 'تصفية وتقفيل حساب الملاك والعملاء (Settlement)',
+                            'company-closing': 'تقفيل الشركة المالي الشامل (Company Closing)'
+                        },
+                        en: {
+                            settlement: 'Settlement & Owner Statement',
+                            'company-closing': 'Company Closing (Full Financial)'
+                        }
+                    };
+                    const rptType = document.getElementById('report-type-select');
+                    if (rptType && reportOptionLabels[lang]) {
+                        const optSet = rptType.querySelector('option[value="settlement"]');
+                        const optComp = rptType.querySelector('option[value="company-closing"]');
+                        if (optSet) optSet.innerText = reportOptionLabels[lang].settlement;
+                        if (optComp) optComp.innerText = reportOptionLabels[lang]['company-closing'];
+                    }
+                } catch (e) {
+                    console.warn('applyLanguage: failed to set report-type option labels', e);
+                }
+
+                // Ensure specific report elements are updated even if they were set dynamically
+                try {
+                    const rptTitle = document.getElementById('report-results-title');
+                    if (rptTitle) rptTitle.innerText = translations[lang]['reports-preview-title'] || translations[lang]['reports-title'] || rptTitle.innerText;
+
+                    const rptDesc = document.querySelector('#report-settlement-preview-box p');
+                    if (rptDesc) rptDesc.innerText = translations[lang]['reports-preview-desc'] || rptDesc.innerText;
+
+                    const btnSettleExcel = document.getElementById('btn-settle-excel');
+                    if (btnSettleExcel) btnSettleExcel.innerText = (translations[lang]['btn-settle-excel'] || btnSettleExcel.innerText);
+                    const btnSettlePdf = document.getElementById('btn-settle-pdf');
+                    if (btnSettlePdf) btnSettlePdf.innerText = (translations[lang]['btn-settle-pdf'] || btnSettlePdf.innerText);
+                    const btnPrintInv = document.getElementById('btn-print-invoice');
+                    if (btnPrintInv) btnPrintInv.innerText = (translations[lang]['btn-print-report'] || btnPrintInv.innerText);
+
+                    const compTitle = document.querySelector('#report-company-closing-box h4');
+                    if (compTitle) compTitle.innerText = translations[lang]['company-closing-title'] || compTitle.innerText;
+                    const compDesc = document.querySelector('#report-company-closing-box p');
+                    if (compDesc) compDesc.innerText = translations[lang]['company-closing-desc'] || compDesc.innerText;
+                } catch (e) {
+                    console.warn('applyLanguage (reports extras) failed', e);
+                }
+
                 updateOwnersDropdown(allOwners);
                 updateContractsDropdowns();
                 updateExpensesDropdowns();
@@ -1980,11 +2052,21 @@
             const mobileDrawer = document.getElementById('mobile-drawer');
             const mobileDrawerClose = document.getElementById('mobile-drawer-close');
             if (mobileMenuBtn && mobileDrawer) {
+                const mobileBackdrop = document.getElementById('mobile-drawer-backdrop');
+                function closeMobileDrawer() {
+                    mobileDrawer.classList.remove('open');
+                    if (mobileBackdrop) mobileBackdrop.classList.add('hidden');
+                    document.body.style.overflow = '';
+                }
                 mobileMenuBtn.addEventListener('click', () => {
                     mobileDrawer.classList.add('open');
+                    if (mobileBackdrop) mobileBackdrop.classList.remove('hidden');
+                    document.body.style.overflow = 'hidden';
                 });
-                if (mobileDrawerClose) mobileDrawerClose.addEventListener('click', () => mobileDrawer.classList.remove('open'));
-                mobileDrawer.querySelectorAll('.tab-btn').forEach(b => b.addEventListener('click', () => mobileDrawer.classList.remove('open')));
+                if (mobileDrawerClose) mobileDrawerClose.addEventListener('click', closeMobileDrawer);
+                if (mobileBackdrop) mobileBackdrop.addEventListener('click', closeMobileDrawer);
+                mobileDrawer.querySelectorAll('.tab-btn').forEach(b => b.addEventListener('click', closeMobileDrawer));
+                document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeMobileDrawer(); });
             }
 
             // 4. قراءة الملاك لايف
@@ -3111,6 +3193,95 @@
                     const startDateStr = reportStartDateInput.value;
                     const endDateStr = reportEndDateInput.value;
 
+                    const reportMode = document.getElementById('report-type-select') ? document.getElementById('report-type-select').value : 'settlement';
+
+                    // If user requested company-closing, generate detailed company closing listing
+                    if (reportMode === 'company-closing') {
+                        const compArea = document.getElementById('company-closing-print-area');
+                        if (compArea) {
+                            // Find contracts in period
+                            const filteredContracts = allContracts.filter(c => {
+                                const d = c.createdAt ? c.createdAt.substring(0,10) : '';
+                                return isDateInPeriod(d);
+                            });
+
+                            // Build contracts table rows
+                            let contractsHtml = '';
+                            let contractsCount = 0;
+                            let totalContractsValue = 0;
+                            let totalOfficeCommissionComp = 0;
+
+                            filteredContracts.forEach(cont => {
+                                contractsCount++;
+                                const contractDate = cont.createdAt ? cont.createdAt.split('T')[0] : '-';
+                                const gross = (cont.daysCount || 1) * (cont.dayPrice || 0);
+                                const commission = gross * ((cont.officeProfitRate || 10) / 100);
+                                const ownerShare = gross - commission;
+                                totalContractsValue += gross;
+                                totalOfficeCommissionComp += commission;
+
+                                // car and owner lookup (best-effort)
+                                const car = allCars.find(cc=>cc.id===cont.carId) || {};
+                                const owner = allOwners.find(o=>o.id===car.ownerId) || {};
+
+                                // owner-specific expenses during period
+                                const ownerExpensesForPeriod = allExpenses.filter(e => e.payer === 'owner' && e.targetId === (owner.id || '') && isDateInPeriod(e.date));
+                                let ownerExpHtml = '';
+                                if (ownerExpensesForPeriod.length) {
+                                    ownerExpensesForPeriod.forEach(oe => {
+                                        ownerExpHtml += `<div class="text-xs flex justify-between border-t pt-2"><div>${oe.title}</div><div class="font-mono">${parseFloat(oe.amount).toFixed(2)} EGP</div><div class="text-slate-400 ml-4">${oe.date}</div></div>`;
+                                    });
+                                }
+
+                                contractsHtml += `<div class="p-3 rounded-lg border mb-2">
+                                    <div class="text-sm font-bold">${cont.serial || cont.id} — ${contractDate}</div>
+                                    <div class="text-xs text-slate-600">${car.brand || ''} ${car.model || ''} (${car.plate || '-'}) • ${owner.name || 'Owner'}</div>
+                                    <div class="mt-2 text-xs grid grid-cols-3 gap-2">
+                                        <div class="font-mono">Gross: ${gross.toFixed(2)} EGP</div>
+                                        <div class="font-mono">Commission: ${commission.toFixed(2)} EGP</div>
+                                        <div class="font-mono">Owner Share: ${ownerShare.toFixed(2)} EGP</div>
+                                    </div>
+                                    ${ ownerExpHtml ? `<div class="mt-2"><div class="text-[11px] font-semibold">Owner Expenses:</div>${ownerExpHtml}</div>` : '' }
+                                </div>`;
+                            });
+
+                            // Company expenses in period
+                            const compExpenses = allExpenses.filter(e => e.payer === 'company' && isDateInPeriod(e.date));
+                            let expensesHtml = '';
+                            let totalCompExpenses = 0;
+                            compExpenses.forEach(exp => { totalCompExpenses += parseFloat(exp.amount || 0); expensesHtml += `<div class="p-2 border-b text-xs flex justify-between"><div>${exp.title}</div><div class="font-mono">${parseFloat(exp.amount).toFixed(2)} EGP</div><div class="text-slate-400 ml-4">${exp.date}</div></div>`; });
+
+                            // Compose final HTML
+                            compArea.innerHTML = `
+                                <div class="mb-4">
+                                    <h4 class="font-bold text-lg">${t('reports-title') || 'Company Closing'}</h4>
+                                    <div class="text-sm text-slate-500">${t('reports-sub') || ''}</div>
+                                </div>
+                                <div class="mb-3 text-sm">
+                                    <div>Contracts in period: <strong>${contractsCount}</strong></div>
+                                    <div>Contracts Total Value: <strong>${totalContractsValue.toFixed(2)} EGP</strong></div>
+                                    <div>Office Commission Total: <strong>${totalOfficeCommissionComp.toFixed(2)} EGP</strong></div>
+                                    <div>Company Expenses Total: <strong>${totalCompExpenses.toFixed(2)} EGP</strong></div>
+                                </div>
+                                <div class="mb-4">
+                                    <h5 class="font-bold text-sm mb-2">Contracts Details</h5>
+                                    ${contractsHtml || '<div class="text-xs text-slate-400">No contracts in period.</div>'}
+                                </div>
+                                <div>
+                                    <h5 class="font-bold text-sm mb-2">Company Expenses</h5>
+                                    ${expensesHtml || '<div class="text-xs text-slate-400">No company expenses in period.</div>'}
+                                </div>
+                            `;
+
+                            // show company closing box, hide settlement preview
+                            const previewBox = document.getElementById('report-settlement-preview-box');
+                            const compBox = document.getElementById('report-company-closing-box');
+                            if (previewBox) previewBox.classList.add('hidden');
+                            if (compBox) compBox.classList.remove('hidden');
+                        }
+                        return; // stop further settlement calculations
+                    }
+
                     if(!entityId) return;
 
                     // تعبئة البيانات الزمنية في منطقة الفاتورة
@@ -3257,6 +3428,11 @@
                         finalNet = (totalGrossCost + totalExtraKmRevenues + totalDeductedExpenses) - totalOfficeCommission;
                     }
 
+                    // ensure settlement preview is visible and company closing hidden
+                    const previewBoxNow = document.getElementById('report-settlement-preview-box');
+                    const compBoxNow = document.getElementById('report-company-closing-box');
+                    if (previewBoxNow) previewBoxNow.classList.remove('hidden');
+                    if (compBoxNow) compBoxNow.classList.add('hidden');
                     document.getElementById('rep-total-earned').innerText = totalGrossCost.toFixed(2) + " EGP";
                     document.getElementById('rep-total-deducted').innerText = (totalOfficeCommission + totalDeductedExpenses).toFixed(2) + " EGP";
                     document.getElementById('rep-net-result').innerText = finalNet.toFixed(2) + " EGP";
