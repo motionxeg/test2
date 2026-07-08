@@ -1046,33 +1046,34 @@
 
                         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6" id="company-closing-print-area">
                             <div class="bg-gray-50 dark:bg-slate-950/40 p-4 rounded-xl border border-gray-100 dark:border-slate-800/60 text-right">
+                                <span class="text-xs text-slate-400 block font-medium">عدد العقود</span>
+                                <span id="closing-executed-contracts" class="text-lg font-bold text-amber-500 mt-1 block">0</span>
+                            </div>
+                            <div class="bg-gray-50 dark:bg-slate-950/40 p-4 rounded-xl border border-gray-100 dark:border-slate-800/60 text-right">
                                 <span class="text-xs text-slate-400 block font-medium">إجمالي قيمة العقود</span>
                                 <span id="closing-total-contracts-value" class="text-lg font-bold text-slate-800 dark:text-slate-100 mt-1 block">0.00 EGP</span>
                             </div>
                             <div class="bg-gray-50 dark:bg-slate-950/40 p-4 rounded-xl border border-gray-100 dark:border-slate-800/60 text-right">
-                                <span class="text-xs text-slate-400 block font-medium">إجمالي ربح المكتب بالعقود</span>
-                                <span id="closing-office-profit" class="text-lg font-bold text-emerald-500 mt-1 block">0.00 EGP</span>
+                                <span class="text-xs text-slate-400 block font-medium">إجمالي مستحق المالك</span>
+                                <span id="closing-total-owner-due" class="text-lg font-bold text-emerald-500 mt-1 block">0.00 EGP</span>
                             </div>
                             <div class="bg-gray-50 dark:bg-slate-950/40 p-4 rounded-xl border border-gray-100 dark:border-slate-800/60 text-right">
-                                <span class="text-xs text-slate-400 block font-medium">إيرادات كيلومترات زائدة</span>
-                                <span id="closing-extra-km-revenue" class="text-lg font-bold text-indigo-500 mt-1 block">0.00 EGP</span>
+                                <span class="text-xs text-slate-400 block font-medium">إجمالي الكيلومترات</span>
+                                <span id="closing-total-km" class="text-lg font-bold text-indigo-500 mt-1 block">0</span>
                             </div>
                             <div class="bg-gray-50 dark:bg-slate-950/40 p-4 rounded-xl border border-gray-100 dark:border-slate-800/60 text-right">
-                                <span class="text-xs text-slate-400 block font-medium">إجمالي المصروفات التشغيلية</span>
+                                <span class="text-xs text-slate-400 block font-medium">إجمالي المصروفات</span>
                                 <span id="closing-total-expenses" class="text-lg font-bold text-rose-500 mt-1 block">0.00 EGP</span>
                             </div>
                             <div class="bg-gray-50 dark:bg-slate-950/40 p-4 rounded-xl border border-gray-100 dark:border-slate-800/60 text-right">
-                                <span class="text-xs text-slate-400 block font-medium">صافي ربح الشركة النهائي</span>
-                                <span id="closing-net-profit" class="text-lg font-bold text-blue-500 mt-1 block">0.00 EGP</span>
-                            </div>
-                            <div class="bg-gray-50 dark:bg-slate-950/40 p-4 rounded-xl border border-gray-100 dark:border-slate-800/60 text-right">
-                                <span class="text-xs text-slate-400 block font-medium">العقود المنفذة بالفترة</span>
-                                <span id="closing-executed-contracts" class="text-lg font-bold text-amber-500 mt-1 block">0</span>
+                                <span class="text-xs text-slate-400 block font-medium">صافي المبلغ المستحق للمالك</span>
+                                <span id="closing-net-owner-due" class="text-lg font-bold text-blue-500 mt-1 block">0.00 EGP</span>
                             </div>
                             <div class="bg-gray-50 dark:bg-slate-950/40 p-4 rounded-xl border border-gray-100 dark:border-slate-800/60 text-right">
                                 <span class="text-xs text-slate-400 block font-medium">السيارات العاملة بالفترة</span>
                                 <span id="closing-working-cars" class="text-lg font-bold text-blue-400 mt-1 block">0</span>
                             </div>
+                            <div id="company-closing-details" class="col-span-1 md:col-span-3 mt-4"></div>
                         </div>
 
                         <div class="flex space-x-2 space-x-reverse pt-4 border-t border-gray-100 dark:border-slate-800">
@@ -3198,7 +3199,8 @@
                     // If user requested company-closing, generate detailed company closing listing
                     if (reportMode === 'company-closing') {
                         const compArea = document.getElementById('company-closing-print-area');
-                        if (compArea) {
+                        const detailsArea = document.getElementById('company-closing-details');
+                        if (compArea && detailsArea) {
                             // Find contracts in period
                             const filteredContracts = allContracts.filter(c => {
                                 const d = c.createdAt ? c.createdAt.substring(0,10) : '';
@@ -3208,11 +3210,12 @@
                             // Build contracts table rows
                             let contractsCount = 0;
                             let totalContractsValue = 0;
-                            let totalOfficeCommissionComp = 0;
-                            let totalCompanyProfit = 0;
                             let totalOwnerDue = 0;
                             let totalKmDriven = 0;
                             let totalOwnerExpenses = 0;
+                            let totalCompExpenses = 0;
+                            let totalWorkingCars = 0;
+                            let totalCompanyCommission = 0;
 
                             let contractsRows = '';
 
@@ -3223,107 +3226,83 @@
                                 const commission = gross * ((cont.officeProfitRate || 10) / 100);
                                 const ownerShare = gross - commission;
                                 totalContractsValue += gross;
-                                totalOfficeCommissionComp += commission;
-                                totalCompanyProfit += commission;
                                 totalOwnerDue += ownerShare;
+                                totalCompanyCommission += commission;
 
-                                // calculate kilometers driven for this contract (best-effort)
                                 let drivenKm = 0;
                                 if (cont.kmEnd && cont.kmStart) drivenKm = (cont.kmEnd - cont.kmStart);
                                 totalKmDriven += drivenKm;
 
-                                // car and owner lookup (best-effort)
-                                const car = allCars.find(cc=>cc.id===cont.carId) || {};
-                                const owner = allOwners.find(o=>o.id===car.ownerId) || {};
+                                const car = allCars.find(cc => cc.id === cont.carId) || {};
+                                const customer = allCustomers.find(c => c.id === cont.customerId) || {};
+                                const owner = allOwners.find(o => o.id === car.ownerId) || {};
 
-                                // owner-specific expenses during period
                                 const ownerExpensesForPeriod = allExpenses.filter(e => e.payer === 'owner' && e.targetId === (owner.id || '') && isDateInPeriod(e.date));
-                                let ownerExpHtml = '';
                                 if (ownerExpensesForPeriod.length) {
-                                    ownerExpensesForPeriod.forEach(oe => {
-                                        ownerExpHtml += `<div class="text-xs flex justify-between border-t pt-2"><div>${oe.title}</div><div class="font-mono">${parseFloat(oe.amount).toFixed(2)} EGP</div><div class="text-slate-400 ml-4">${oe.date}</div></div>`;
-                                    });
+                                    ownerExpensesForPeriod.forEach(oe => { totalOwnerExpenses += parseFloat(oe.amount || 0); });
                                 }
 
                                 const statusText = cont.status || '-';
 
-                                contractsRows += `<tr class="border-b">
+                                contractsRows += `<tr class="border-b text-xs text-slate-700 dark:text-slate-300">
                                     <td class="px-2 py-2">${cont.serial || cont.id}</td>
                                     <td class="px-2 py-2">${contractDate}</td>
+                                    <td class="px-2 py-2">${customer.name || 'عميل غير معروف'}</td>
                                     <td class="px-2 py-2">${car.brand || ''} ${car.model || ''} (${car.plate || '-'})</td>
-                                    <td class="px-2 py-2">${owner.name || 'مالك غير معروف'}</td>
-                                    <td class="px-2 py-2 text-right font-mono">${commission.toFixed(2)}</td>
+                                    <td class="px-2 py-2 text-right font-mono">${gross.toFixed(2)}</td>
                                     <td class="px-2 py-2 text-right font-mono">${ownerShare.toFixed(2)}</td>
                                     <td class="px-2 py-2 text-center">${drivenKm}</td>
                                     <td class="px-2 py-2 text-center">${statusText}</td>
                                 </tr>`;
-
-                                // owner-specific expenses during period (for totals)
-                                if (ownerExpensesForPeriod.length) {
-                                    ownerExpensesForPeriod.forEach(oe => { totalOwnerExpenses += parseFloat(oe.amount || 0); });
-                                }
                             });
 
-                            // Company expenses in period
                             const compExpenses = allExpenses.filter(e => e.payer === 'company' && isDateInPeriod(e.date));
                             let expensesHtml = '';
-                            let totalCompExpenses = 0;
-                            compExpenses.forEach(exp => { totalCompExpenses += parseFloat(exp.amount || 0); expensesHtml += `<div class="p-2 border-b text-xs flex justify-between"><div>${exp.title}</div><div class="font-mono">${parseFloat(exp.amount).toFixed(2)} EGP</div><div class="text-slate-400 ml-4">${exp.date}</div></div>`; });
+                            compExpenses.forEach(exp => {
+                                totalCompExpenses += parseFloat(exp.amount || 0);
+                                expensesHtml += `<div class="p-2 border-b text-xs flex justify-between"><div>${exp.title}</div><div class="font-mono">${parseFloat(exp.amount).toFixed(2)} EGP</div><div class="text-slate-400 ml-4">${exp.date}</div></div>`;
+                            });
 
-                            // Compose contracts table HTML
-                            let tableHtml = '';
-                            if (contractsRows) {
-                                tableHtml = `<div class="overflow-x-auto mt-2"><table class="w-full table-auto text-xs border-collapse">
-                                    <thead><tr class="bg-gray-100"><th class="px-2 py-2 text-left">رقم العقد</th><th class="px-2 py-2 text-left">تاريخ العقد</th><th class="px-2 py-2 text-left">السيارة</th><th class="px-2 py-2 text-left">اسم المالك</th><th class="px-2 py-2 text-right">مكسب الشركة من العقد</th><th class="px-2 py-2 text-right">مستحق المالك</th><th class="px-2 py-2 text-center">الكيلومترات</th><th class="px-2 py-2 text-center">الحالة</th></tr></thead>
+                            const tableHtml = contractsRows ? `<div class="overflow-x-auto mt-2"><table class="w-full table-auto text-xs border-collapse">
+                                    <thead><tr class="bg-gray-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400"><th class="px-2 py-2 text-left">رقم العقد</th><th class="px-2 py-2 text-left">تاريخ العقد</th><th class="px-2 py-2 text-left">اسم العميل</th><th class="px-2 py-2 text-left">السيارة</th><th class="px-2 py-2 text-right">قيمة العقد</th><th class="px-2 py-2 text-right">مبلغ المالك المستحق</th><th class="px-2 py-2 text-center">عدد الكيلومترات</th><th class="px-2 py-2 text-center">حالة العقد</th></tr></thead>
                                     <tbody>${contractsRows}</tbody>
-                                </table></div>`;
-                            } else {
-                                tableHtml = '<div class="text-xs text-slate-400">No contracts in period.</div>';
-                            }
+                                </table></div>` : `<div class="text-xs text-slate-400">${currentLang === 'en' ? 'No contracts in period.' : 'لا يوجد عقود في الفترة المحددة.'}</div>`;
 
                             const netOwnerPayable = totalOwnerDue - totalOwnerExpenses;
-                            const netCompanyProfit = totalCompanyProfit - totalCompExpenses;
+                            const totalCarsCount = new Set(filteredContracts.map(c => c.carId)).size;
 
-                            // Compose final HTML including summary
-                            compArea.innerHTML = `
-                                <div class="mb-4">
-                                    <h4 class="font-bold text-lg">${t('reports-title') || 'Company Closing'}</h4>
-                                    <div class="text-sm text-slate-500">${t('reports-sub') || ''}</div>
-                                </div>
-                                <div class="mb-3 text-sm grid grid-cols-1 md:grid-cols-3 gap-3">
-                                    <div class="bg-gray-50 p-3 rounded-md text-sm"><div class="text-xs text-slate-400">عدد العقود</div><div class="font-bold text-lg">${contractsCount}</div></div>
-                                    <div class="bg-gray-50 p-3 rounded-md text-sm"><div class="text-xs text-slate-400">إجمالي قيمة العقود (جروس)</div><div class="font-bold text-lg">${totalContractsValue.toFixed(2)} EGP</div></div>
-                                    <div class="bg-gray-50 p-3 rounded-md text-sm"><div class="text-xs text-slate-400">إجمالي مكاسب الشركة</div><div class="font-bold text-lg">${totalCompanyProfit.toFixed(2)} EGP</div></div>
-                                    <div class="bg-gray-50 p-3 rounded-md text-sm"><div class="text-xs text-slate-400">إجمالي مستحقات المالك</div><div class="font-bold text-lg">${totalOwnerDue.toFixed(2)} EGP</div></div>
-                                    <div class="bg-gray-50 p-3 rounded-md text-sm"><div class="text-xs text-slate-400">إجمالي الكيلومترات</div><div class="font-bold text-lg">${totalKmDriven}</div></div>
-                                    <div class="bg-gray-50 p-3 rounded-md text-sm"><div class="text-xs text-slate-400">إجمالي مصروفات الشركة</div><div class="font-bold text-lg">${totalCompExpenses.toFixed(2)} EGP</div></div>
-                                    <div class="bg-gray-50 p-3 rounded-md text-sm"><div class="text-xs text-slate-400">إجمالي مصروفات المالك</div><div class="font-bold text-lg">${totalOwnerExpenses.toFixed(2)} EGP</div></div>
-                                    <div class="bg-white col-span-1 md:col-span-3 p-3 rounded-md border mt-2">
-                                        <div class="text-sm text-slate-600">صافي المبلغ المستحق للمالك</div>
-                                        <div class="font-bold text-2xl">${netOwnerPayable.toFixed(2)} EGP</div>
-                                    </div>
-                                    <div class="bg-white col-span-1 md:col-span-3 p-3 rounded-md border mt-2">
-                                        <div class="text-sm text-slate-600">صافي مكسب الشركة بعد المصاريف</div>
-                                        <div class="font-bold text-2xl">${netCompanyProfit.toFixed(2)} EGP</div>
-                                    </div>
-                                </div>
-                                <div class="mb-4">
-                                    <h5 class="font-bold text-sm mb-2">تفاصيل العقود</h5>
+                            const closingTotalContractsValueEl = document.getElementById('closing-total-contracts-value');
+                            const closingTotalOwnerDueEl = document.getElementById('closing-total-owner-due');
+                            const closingTotalKmEl = document.getElementById('closing-total-km');
+                            const closingTotalExpensesEl = document.getElementById('closing-total-expenses');
+                            const closingNetOwnerDueEl = document.getElementById('closing-net-owner-due');
+                            const closingExecutedContractsEl = document.getElementById('closing-executed-contracts');
+                            const closingWorkingCarsEl = document.getElementById('closing-working-cars');
+
+                            if (closingTotalContractsValueEl) closingTotalContractsValueEl.innerText = `${totalContractsValue.toFixed(2)} EGP`;
+                            if (closingTotalOwnerDueEl) closingTotalOwnerDueEl.innerText = `${totalOwnerDue.toFixed(2)} EGP`;
+                            if (closingTotalKmEl) closingTotalKmEl.innerText = totalKmDriven;
+                            if (closingTotalExpensesEl) closingTotalExpensesEl.innerText = `${totalCompExpenses.toFixed(2)} EGP`;
+                            if (closingNetOwnerDueEl) closingNetOwnerDueEl.innerText = `${netOwnerPayable.toFixed(2)} EGP`;
+                            if (closingExecutedContractsEl) closingExecutedContractsEl.innerText = contractsCount;
+                            if (closingWorkingCarsEl) closingWorkingCarsEl.innerText = totalCarsCount;
+
+                            detailsArea.innerHTML = `
+                                <div class="bg-white dark:bg-slate-950 rounded-2xl border border-gray-100 dark:border-slate-800 p-4">
+                                    <div class="mb-3 text-sm font-semibold text-slate-700 dark:text-slate-200">ملخص تقرير تقفيل الشركة الشامل</div>
                                     ${tableHtml}
-                                </div>
-                                <div>
-                                    <h5 class="font-bold text-sm mb-2">Company Expenses</h5>
-                                    ${expensesHtml || '<div class="text-xs text-slate-400">No company expenses in period.</div>'}
-                                </div>
-                            `;
+                                    <div class="mt-4">
+                                        <div class="text-xs text-slate-400 mb-2">${currentLang === 'en' ? 'Company Expenses' : 'مصروفات الشركة'}</div>
+                                        ${expensesHtml || `<div class="text-xs text-slate-400">${currentLang === 'en' ? 'No company expenses in period.' : 'لا توجد مصروفات شركة في الفترة المحددة.'}</div>`}
+                                    </div>
+                                </div>`;
 
-                            // show company closing box, hide settlement preview
                             const previewBox = document.getElementById('report-settlement-preview-box');
                             const compBox = document.getElementById('report-company-closing-box');
                             if (previewBox) previewBox.classList.add('hidden');
                             if (compBox) compBox.classList.remove('hidden');
                         }
-                        return; // stop further settlement calculations
+                        return;
                     }
 
                     if(!entityId) return;
@@ -4065,11 +4044,9 @@
                 reportTypeSelect.addEventListener('change', () => {
                     const val = reportTypeSelect.value;
                     if (val === 'settlement') {
-                        if (reportSettlementFields) reportSettlementFields.classList.remove('hidden');
                         if (reportSettlementPreviewBox) reportSettlementPreviewBox.classList.remove('hidden');
                         if (reportCompanyClosingBox) reportCompanyClosingBox.classList.add('hidden');
                     } else {
-                        if (reportSettlementFields) reportSettlementFields.classList.add('hidden');
                         if (reportSettlementPreviewBox) reportSettlementPreviewBox.classList.add('hidden');
                         if (reportCompanyClosingBox) reportCompanyClosingBox.classList.remove('hidden');
                     }
@@ -4117,12 +4094,12 @@
                 btnClosingExcel.addEventListener('click', () => {
                     const data = [
                         ["بند تقرير تقفيل الشركة الشامل", "القيمة المالية"],
+                        ["عدد العقود", document.getElementById('closing-executed-contracts').innerText],
                         ["إجمالي قيمة العقود", document.getElementById('closing-total-contracts-value').innerText],
-                        ["إجمالي ربح المكتب بالعقود", document.getElementById('closing-office-profit').innerText],
-                        ["إيرادات كيلومترات زائدة", document.getElementById('closing-extra-km-revenue').innerText],
-                        ["إجمالي المصروفات التشغيلية", document.getElementById('closing-total-expenses').innerText],
-                        ["صافي ربح الشركة النهائي", document.getElementById('closing-net-profit').innerText],
-                        ["العقود المنفذة بالفترة", document.getElementById('closing-executed-contracts').innerText],
+                        ["إجمالي مستحق المالك", document.getElementById('closing-total-owner-due').innerText],
+                        ["إجمالي الكيلومترات", document.getElementById('closing-total-km').innerText],
+                        ["إجمالي المصروفات", document.getElementById('closing-total-expenses').innerText],
+                        ["صافي المبلغ المستحق للمالك", document.getElementById('closing-net-owner-due').innerText],
                         ["السيارات العاملة بالفترة", document.getElementById('closing-working-cars').innerText]
                     ];
                     const ws = XLSX.utils.aoa_to_sheet(data);
