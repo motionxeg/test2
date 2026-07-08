@@ -3269,7 +3269,6 @@
                             let expensesHtml = '';
                             let totalCompExpenses = 0;
                             compExpenses.forEach(exp => { totalCompExpenses += parseFloat(exp.amount || 0); expensesHtml += `<div class="p-2 border-b text-xs flex justify-between"><div>${exp.title}</div><div class="font-mono">${parseFloat(exp.amount).toFixed(2)} EGP</div><div class="text-slate-400 ml-4">${exp.date}</div></div>`; });
-                            const netCompanyProfit = totalCompanyProfit - totalCompExpenses;
 
                             // Compose contracts table HTML
                             let tableHtml = '';
